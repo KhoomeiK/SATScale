@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/khoomeik/SATScale/main/satscale.png" height="300" alt="Scaling Boolean Satisfiability" />
+  <img src="https://raw.githubusercontent.com/khoomeik/SATScale/main/SATScale.png" height="400" alt="Scaling Boolean Satisfiability" />
 </p>
 <p align="center">
   <em>Towards scalable solutions for boolean satisfiability</em>
