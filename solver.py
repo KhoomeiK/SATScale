@@ -8,6 +8,9 @@ import wandb
 
 from data import CNFDataset, train_eval_test_split, collate_fn
 
+PREDICT_SOLUTION = False  # predict assignments instead of satisfiability
+
+
 class TransformerBinaryClassifier(nn.Module):
     def __init__(self, input_dim, num_layers, num_heads):
         super(TransformerBinaryClassifier, self).__init__()
@@ -19,10 +22,13 @@ class TransformerBinaryClassifier(nn.Module):
         )
         self.fc = nn.Linear(input_dim, 1)
 
+        self.predict_solution = PREDICT_SOLUTION
+
     def forward(self, src):
         output = self.transformer_encoder(src)
         output = torch.sum(output, dim=0)
-        output = self.fc(output)
+        if not self.predict_solution:
+            output = self.fc(output)
         return torch.sigmoid(output)
 
 
@@ -51,7 +57,11 @@ def train_model(train_dataset, eval_dataset):
             collate_fn=collate_fn,
         )
 
-        criterion = nn.BCELoss()
+        if PREDICT_SOLUTION:
+            criterion = nn.MSELoss()  # or nn.BCEWithLogitsLoss() if treating as element-wise classification
+        else:
+            criterion = nn.BCELoss()
+
         optimizer = optim.Adam(model.parameters(), lr=hparams["learning_rate"])
         scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer, step_size=hparams["step_size"], gamma=hparams["gamma"]

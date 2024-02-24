@@ -33,3 +33,5 @@ python src/generate_labels.py marginal data_nsnet/SATSolving/ca/valid
 
 python src/generate_labels.py assignment data_nsnet/SATSolving/ca/train
 python src/generate_labels.py assignment data_nsnet/SATSolving/ca/valid
+
+python src/upload_data.py data_nsnet/SATSolving
