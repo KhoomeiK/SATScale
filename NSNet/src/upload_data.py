@@ -74,19 +74,20 @@ def upload_to_huggingface(directory):
                             }
                         )
 
-                        # simply flip sign on first variable in final clause to generate unsat counterpart
-                        unsat_clauses = copy.deepcopy(clauses)
-                        unsat_clauses[-1][0] = -unsat_clauses[-1][0]
-                        data.append(
-                            {
-                                "name": f"-{file_num}",
-                                "n_vars": n_vars,
-                                "n_clauses": n_clauses,
-                                "clauses": unsat_clauses,
-                                "marginals": [],
-                                "assignments": [],
-                            }
-                        )
+                        if dataset_name == "sr":
+                            # simply flip sign on first variable in final clause to generate unsat counterpart
+                            unsat_clauses = copy.deepcopy(clauses)
+                            unsat_clauses[-1][0] = -unsat_clauses[-1][0]
+                            data.append(
+                                {
+                                    "name": f"-{file_num}",
+                                    "n_vars": n_vars,
+                                    "n_clauses": n_clauses,
+                                    "clauses": unsat_clauses,
+                                    "marginals": [],
+                                    "assignments": [],
+                                }
+                            )
 
                 # Directly create a Hugging Face dataset from the list of dictionaries
                 dataset_dict[split] = Dataset.from_list(data)
