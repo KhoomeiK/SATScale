@@ -80,8 +80,11 @@ def upload_to_huggingface(directory):
                         data.append(
                             {
                                 "name": f"-{file_num}",
+                                "n_vars": n_vars,
+                                "n_clauses": n_clauses,
                                 "clauses": unsat_clauses,
-                                "label": [],
+                                "marginals": [],
+                                "assignments": [],
                             }
                         )
 
