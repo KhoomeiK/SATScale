@@ -1,7 +1,8 @@
+import copy
 import os
 import argparse
 import pickle
-from datasets import DatasetDict, load_dataset, Dataset
+from datasets import DatasetDict, Dataset
 from huggingface_hub import HfApi, HfFolder
 
 
@@ -11,12 +12,17 @@ def parse_cnf_file(file_path):
         clauses = []
         for line in file:
             # Skip comments and problem line
-            if line.startswith("c") or line.startswith("p"):
+            if line.startswith("c"):
+                continue
+            if line.startswith("p"):
+                toks = line.split(" ")
+                n_vars = int(toks[2])
+                n_clauses = int(toks[3])
                 continue
             # Convert line to list of integers, excluding the trailing 0
             clause = list(map(int, line.strip().split()))[:-1]
             clauses.append(clause)
-        return clauses
+        return clauses, n_vars, n_clauses
 
 
 def upload_to_huggingface(directory):
@@ -24,8 +30,16 @@ def upload_to_huggingface(directory):
     dataset_dirs = [
         d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))
     ]
+    splits = ("train", "valid", "test")
 
-    splits = ("train", "valid", "test", "test_hard")
+    # Authenticate with Hugging Face
+    api = HfApi()
+    token = HfFolder.get_token()
+    if token is None:
+        raise ValueError(
+            "Hugging Face Hub token not found. Please login using `huggingface-cli login`."
+        )
+    username = api.whoami(token)["name"]
 
     for dataset_dir in dataset_dirs:
         dataset_dict = {}
@@ -35,27 +49,33 @@ def upload_to_huggingface(directory):
         for split in splits:
             split_dir = os.path.join(directory, dataset_dir, split)
             if os.path.exists(split_dir):
-                labels = []
                 with open(os.path.join(split_dir, "marginals.pkl"), "rb") as f:
-                    labels = pickle.load(f) # List[List[float]]
+                    marginals = pickle.load(f)  # List[List[float]]
+
+                with open(os.path.join(split_dir, "assignments.pkl"), "rb") as f:
+                    assignments = pickle.load(f)  # List[List[bool]]
+                    assignments = [[int(var) for var in row] for row in assignments]
 
                 data = []
                 for f in os.listdir(split_dir):
                     if f.endswith(".cnf"):
                         file_num = int(f.split(".")[0])
                         file_path = os.path.join(split_dir, f)
-                        clauses = parse_cnf_file(file_path)
+                        clauses, n_vars, n_clauses = parse_cnf_file(file_path)
                         # Each file's clauses are added as a separate record
                         data.append(
                             {
-                                "name": file_num,
+                                "name": str(file_num),
+                                "n_vars": n_vars,
+                                "n_clauses": n_clauses,
                                 "clauses": clauses,
-                                "label": labels[file_num],
+                                "marginals": marginals[file_num],
+                                "assignments": assignments[file_num],
                             }
                         )
 
                         # simply flip sign on first variable in final clause to generate unsat counterpart
-                        unsat_clauses = clauses.copy()
+                        unsat_clauses = copy.deepcopy(clauses)
                         unsat_clauses[-1][0] = -unsat_clauses[-1][0]
                         data.append(
                             {
@@ -66,22 +86,15 @@ def upload_to_huggingface(directory):
                         )
 
                 # Directly create a Hugging Face dataset from the list of dictionaries
-                dataset_dict[split] = Dataset.from_dict(data)["train"]
+                dataset_dict[split] = Dataset.from_list(data)
 
         # Create a DatasetDict
         dataset = DatasetDict(dataset_dict)
 
-        # Authenticate with Hugging Face and push to the Hub
-        api = HfApi()
-        token = HfFolder.get_token()
-        if token is None:
-            raise ValueError(
-                "Hugging Face Hub token not found. Please login using `huggingface-cli login`."
-            )
-        username = api.whoami(token)["name"]
-
         # Push each dataset to the Hub under its own name
-        dataset.push_to_hub(f"{username}/satscale-{dataset_name}")
+        dataset.push_to_hub(
+            f"{username}/satscale-{dataset_name}-{len(dataset['train'])}"
+        )
 
 
 if __name__ == "__main__":

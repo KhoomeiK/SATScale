@@ -4,7 +4,7 @@ import random
 import networkx as nx
 
 from concurrent.futures.process import ProcessPoolExecutor
-from pysat.solvers import Cadical
+from pysat.solvers import Cadical103 as Cadical
 from cnfgen import RandomKCNF
 from utils.utils import write_dimacs_to, VIG
 
