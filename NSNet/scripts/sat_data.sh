@@ -1,3 +1,5 @@
+# NOTE: ensure you increase --n_process to # CPUs in all the generate_*.py scripts
+
 # sr data
 python src/generate_sr_data.py data_nsnet/SATSolving/sr/train 3000000 --min_n 10 --max_n 40
 python src/generate_sr_data.py data_nsnet/SATSolving/sr/valid 10000 --min_n 10 --max_n 40

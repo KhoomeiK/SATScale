@@ -31,6 +31,7 @@ def write_dimacs_to(n_vars, clauses, out_path):
             for literal in clause:
                 f.write('%d ' % literal)
             f.write('0\n')
+        f.flush()  # NOTE: this did NOT fix the issue of the worker hanging when trying to close the file
 
 
 def parse_cnf_file(file_path):
